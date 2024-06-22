@@ -273,7 +273,6 @@ Cassandra >> performHandshake [
     Transcript show: 'Sending STARTUP frame...'; cr.
     startupFrame := self buildStartupFrame.
     self sendFrame: startupFrame.
-    (Delay forSeconds: 1) wait.
     
     "Receive STARTUP response"
     Transcript show: 'Waiting for STARTUP response...'; cr.
@@ -282,8 +281,8 @@ Cassandra >> performHandshake [
     
     "Handle STARTUP response"
     (self parseResponseOpcode: startupResponse) caseOf: {
-        [2] -> [self handleAuthentication: startupResponse]. "AUTHENTICATE"
-        [3] -> [Transcript show: 'Ready to query'; cr]. "READY"
+        [3] -> [self handleAuthentication: startupResponse]. "AUTHENTICATE"
+        [2] -> [Transcript show: 'Ready to query'; cr]. "READY"
         [0] -> [ "ERROR"
             | errorCode errorMessage |
             errorCode := (startupResponse copyFrom: 10 to: 13) asInteger.
