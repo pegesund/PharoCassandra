@@ -60,10 +60,11 @@ Cassandra >> buildQueryFrame: queryString [
     | stream |
     stream := WriteStream on: (ByteArray new: 100).
     stream
-        nextPutAll: #[0 0 0 1];  "Consistency: ONE"
-        nextPut: 0;  "Flags"
         nextPutAll: (queryString size asByteArrayOfSize: 4);
-        nextPutAll: queryString asByteArray.
+        nextPutAll: queryString asByteArray;
+        nextPutAll: #[0 1];  "Consistency: ONE"
+        nextPut: 0;  "Flags"
+        nextPut: 0.  "number of parameters"
     ^ self buildFrame: 7 "OPCODE_QUERY" withBody: stream contents.
 ]
 
@@ -184,7 +185,7 @@ Cassandra >> parseMetadata: stream [
 
 { #category : 'parsing' }
 Cassandra >> parseResponse: responseBytes [
-    | stream version flags opcode length body kind metadata rowCount rows |
+    | stream version flags opcode length body kind metadata rowCount rows errno |
     stream := ReadStream on: responseBytes.
     
     "Parse header"
@@ -194,12 +195,14 @@ Cassandra >> parseResponse: responseBytes [
     opcode := stream next.
     length := (stream next: 4) asInteger.
     
-    "Ensure it's a RESULT response"
-    opcode = 8 ifFalse: [self error: 'Unexpected opcode'].
-    
     "Parse body"
     body := stream next: length.
     stream := ReadStream on: body.
+    "errno := (stream next: 4) asInteger."
+
+    "Ensure it's a RESULT response"
+    opcode = 8 ifFalse: [self error: 'Unexpected opcode'].
+
     
     kind := (stream next: 4) asInteger.
     
@@ -292,6 +295,7 @@ Cassandra >> performHandshake [
     } otherwise: [self error: 'Unexpected response opcode for STARTUP'].
     
     Transcript show: 'Handshake completed successfully'; cr.
+
 ]
 
 { #category : 'binary' }

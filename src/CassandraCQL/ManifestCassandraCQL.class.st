@@ -22,3 +22,10 @@ ManifestCassandraCQL class >> ruleCascadedNextPutAllsRuleV1FalsePositive [
 	<ignoreForCoverage>
 	^ #(#(#(#RGPackageDefinition #(#CassandraCQL)) #'2024-06-22T16:33:50.799104+02:00') )
 ]
+
+{ #category : 'code-critics' }
+ManifestCassandraCQL class >> ruleLongMethodsRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGPackageDefinition #(#CassandraCQL)) #'2024-06-22T16:44:06.982558+02:00') )
+]
