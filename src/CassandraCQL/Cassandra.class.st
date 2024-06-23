@@ -171,26 +171,27 @@ Cassandra >> handleAuthentication: authResponse [
 
 { #category : 'parsing' }
 Cassandra >> parseMetadata: stream [
-    | flags columnCount columns keyspace type |
+    | flags columnCount columns type |
     flags := (stream next: 4) asInteger.
     columnCount := (stream next: 4) asInteger.
-    keyspace := (1 to: 2) collect: [:i | 
+    columns := (1 to: columnCount) collect: [:i | 
         | nameLength name|
+		  "skip keyspace, as we allready know"
         nameLength := (stream next: 2) asInteger.
         name := (stream next: nameLength) asString.
-        name].
-    columns := (1 to: columnCount ) collect: [:i | 
-        | nameLength name|
+        nameLength := (stream next: 2) asInteger.
+        name := (stream next: nameLength) asString.
         nameLength := (stream next: 2) asInteger.
         name := (stream next: nameLength) asString.
         type := (stream next: 2) asInteger.
-        Array with: name with: type ]. 
-    ^ keyspace.
+        type].
+         
+    ^ columns.
 ]
 
 { #category : 'parsing' }
 Cassandra >> parseResponse: responseBytes [
-    | stream version flags opcode length body kind metadata rowCount rows |
+    | stream version flags opcode length body kind columnTypes rowCount rows |
     stream := ReadStream on: responseBytes.
     
     "Parse header"
@@ -204,7 +205,6 @@ Cassandra >> parseResponse: responseBytes [
     body := stream next: length.
     stream := ReadStream on: body.
   
-
     "Ensure it's a RESULT response"
     opcode = 8 ifFalse: [self error: 'Unexpected opcode'].
     
@@ -213,16 +213,13 @@ Cassandra >> parseResponse: responseBytes [
     "Ensure it's a ROWS result"
     kind = 2 ifFalse: [self error: 'Unexpected result kind'].
 
-    
-    "Parse metadata"
-    metadata := self parseMetadata: stream.
+    "Parse metadata, return a list of column types"
+    columnTypes := self parseMetadata: stream.
 
-   
-    
     "Parse rows"
     rowCount := (stream next: 4) asInteger.
 	 self error: 'Hit, en ikke lenger..'.
-    rows := (1 to: rowCount) collect: [:i | self parseRow: stream columns: metadata].
+    rows := (1 to: rowCount) collect: [:i | self parseRow: stream columns: columnTypes ].
     
     ^ rows.
 ]
