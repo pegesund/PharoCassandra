@@ -251,23 +251,27 @@ Cassandra >> parseRow: stream columns: metadata [
 
 { #category : 'parsing' }
 Cassandra >> parseValue: stream type: typeCode [
-    | length |
-    length := (stream next: 4) asInteger.
-    length = -1 ifTrue: [^ nil].
-    
-    typeCode = 1 ifTrue: [^ (stream next: length) asString]. "ASCII"
-    typeCode = 2 ifTrue: [^ (stream next: 8) asInteger]. "BIGINT"
-    typeCode = 3 ifTrue: [^ (stream next: length) asByteArray ]. "BLOB"
-    typeCode = 4 ifTrue: [^ stream next = 1]. "BOOLEAN"
-    typeCode = 5 ifTrue: [^ (stream next: 8) asFloat]. "DOUBLE"
-    typeCode = 6 ifTrue: [^ (stream next: 4) asFloat]. "FLOAT"
-    typeCode = 9 ifTrue: [^ (stream next: 4) asInteger]. "INT"
-    typeCode = 13 ifTrue: [^ (stream next: length) asString]. "VARCHAR"
-    typeCode = 14 ifTrue: [^ DateAndTime fromUnixTime: (stream next: 8) asInteger / 1000]. "TIMESTAMP"
-    
-    "Default: return raw bytes"
-    ^ stream next: length.
 
+	| length |
+	
+	"Check for compound type, like a map or list"
+	
+	length := (stream next: 4) asInteger.
+	length = -1 ifTrue: [ ^ nil ].
+
+	typeCode = 1 ifTrue: [ ^ (stream next: length) asString ]. "ASCII"
+	typeCode = 2 ifTrue: [ ^ (stream next: 8) asInteger ]. "BIGINT"
+	typeCode = 3 ifTrue: [ ^ (stream next: length) asByteArray ]. "BLOB"
+	typeCode = 4 ifTrue: [ ^ stream next = 1 ]. "BOOLEAN"
+	typeCode = 5 ifTrue: [ ^ (stream next: 8) asFloat ]. "DOUBLE"
+	typeCode = 6 ifTrue: [ ^ (stream next: 4) asFloat ]. "FLOAT"
+	typeCode = 9 ifTrue: [ ^ (stream next: 4) asInteger ]. "INT"
+	typeCode = 13 ifTrue: [ ^ (stream next: length) asString ]. "VARCHAR"
+	typeCode = 14 ifTrue: [
+		^ DateAndTime fromUnixTime: (stream next: 8) asInteger / 1000 ]. "TIMESTAMP"
+
+	"Default: return raw bytes"
+	^ stream next: length
 ]
 
 { #category : 'connection open/close' }
