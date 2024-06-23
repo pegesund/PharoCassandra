@@ -253,10 +253,7 @@ Cassandra >> parseRow: stream columns: metadata [
 Cassandra >> parseValue: stream type: typeCode [
 
 	| length |
-	
-	"Check for compound type, like a map or list"
-	"Now moved to main branch"
-	
+	"Check for compound type, like a map or list""Now moved to main branch"
 	length := (stream next: 4) asInteger.
 	length = -1 ifTrue: [ ^ nil ].
 
@@ -264,8 +261,14 @@ Cassandra >> parseValue: stream type: typeCode [
 	typeCode = 2 ifTrue: [ ^ (stream next: 8) asInteger ]. "BIGINT"
 	typeCode = 3 ifTrue: [ ^ (stream next: length) asByteArray ]. "BLOB"
 	typeCode = 4 ifTrue: [ ^ stream next = 1 ]. "BOOLEAN"
-	typeCode = 5 ifTrue: [ ^ (stream next: 8) asFloat ]. "DOUBLE"
-	typeCode = 6 ifTrue: [ ^ (stream next: 4) asFloat ]. "FLOAT"
+	typeCode = 7 ifTrue: [ |byteArray|
+		byteArray := stream next: 8.
+		^ Float fromIEEE64BitWord: 
+    ((byteArray unsignedLongAt: 1 bigEndian: true) << 32) + 
+    (byteArray unsignedLongAt: 5 bigEndian: true) ]. "DOUBLE"
+	typeCode = 8 ifTrue: [
+		^ Float fromIEEE32Bit:
+			  ((stream next: 4) unsignedLongAt: 1 bigEndian: true) ]. "FLOAT"
 	typeCode = 9 ifTrue: [ ^ (stream next: 4) asInteger ]. "INT"
 	typeCode = 13 ifTrue: [ ^ (stream next: length) asString ]. "VARCHAR"
 	typeCode = 14 ifTrue: [
