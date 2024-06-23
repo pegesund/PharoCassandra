@@ -255,6 +255,7 @@ Cassandra >> parseValue: stream type: typeCode [
 	| length |
 	
 	"Check for compound type, like a map or list"
+	"Now moved to main branch"
 	
 	length := (stream next: 4) asInteger.
 	length = -1 ifTrue: [ ^ nil ].
