@@ -175,6 +175,7 @@ Cassandra >> handleAuthentication: authResponse [
 Cassandra >> parseMetadata: stream [
 
 	| flags columnCount columns type |
+	"Add to this file for more data types"
 	flags := (stream next: 4) asInteger.
 	columnCount := (stream next: 4) asInteger.
 	columns := (1 to: columnCount) collect: [ :i |
@@ -190,10 +191,10 @@ Cassandra >> parseMetadata: stream [
 		           self validateResultType: type.
 		           "Maps"
 		           type = 16r21 ifTrue: [
-			           type := { type . (stream next: 2) asInteger . (stream next: 2) asInteger  }].
+			           type := { type . { (stream next: 2) asInteger . (stream next: 2) asInteger  }}].
 		           "List or set"
 		           (#( 16r20 16r22 ) includes: type) ifTrue: [
-			           type := { type . (stream next: 2) asInteger }].
+			           type := { type . {(stream next: 2) asInteger }}].
 		           type ].
 
 	^ columns
