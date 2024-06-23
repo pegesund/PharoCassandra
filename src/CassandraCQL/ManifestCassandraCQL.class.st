@@ -24,8 +24,22 @@ ManifestCassandraCQL class >> ruleCascadedNextPutAllsRuleV1FalsePositive [
 ]
 
 { #category : 'code-critics' }
+ManifestCassandraCQL class >> ruleLiteralArrayContainsCommaRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGMethodDefinition #(#Cassandra #validateResultType: #false)) #'2024-06-23T13:08:30.590546+02:00') )
+]
+
+{ #category : 'code-critics' }
 ManifestCassandraCQL class >> ruleLongMethodsRuleV1FalsePositive [
 
 	<ignoreForCoverage>
 	^ #(#(#(#RGPackageDefinition #(#CassandraCQL)) #'2024-06-22T16:44:06.982558+02:00') )
+]
+
+{ #category : 'code-critics' }
+ManifestCassandraCQL class >> ruleReNotOptimizedIfRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGMethodDefinition #(#Cassandra #parseMetadata: #false)) #'2024-06-23T13:29:40.512478+02:00') )
 ]

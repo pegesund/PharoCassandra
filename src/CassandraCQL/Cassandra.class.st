@@ -14,9 +14,10 @@ Class {
 	#tag : 'connection'
 }
 
-{ #category : 'as yet unclassified' }
-Cassandra >> buildAuthResponse: username password: password [
+{ #category : 'connection open/close' }
+Cassandra >> buildAuthResponse [ 
     | credentials stream |
+    "Fixme later, does not work"
     credentials := ByteArray streamContents: [ :s |
         s nextPut: 0.
         s nextPutAll: username asByteArray.
@@ -79,7 +80,7 @@ Cassandra >> buildStartupFrame [
     ^ self buildFrame: 1 "OPCODE_STARTUP" withBody: stream contents.
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'helper' }
 Cassandra >> bytesToHexString: aByteArray [
     ^ String streamContents: [ :stream |
         aByteArray do: [ :byte |
@@ -90,11 +91,12 @@ Cassandra >> bytesToHexString: aByteArray [
 
 { #category : 'binary' }
 Cassandra >> checkForTimeout: startTime [
-    (DateAndTime now - startTime) asSeconds > 30 "30-second timeout"
-        ifTrue: [
-            Transcript show: 'Timeout while receiving data'; cr.
-            self error: 'Timeout while receiving data'
-        ].
+
+	(DateAndTime now - startTime) asSeconds > 30 ifFalse: [ ^ self ]. "30-second timeout"
+	Transcript
+		show: 'Timeout while receiving data';
+		cr.
+	self error: 'Timeout while receiving data'
 ]
 
 { #category : 'connection open/close' }
@@ -136,7 +138,7 @@ Cassandra >> executeQuery: queryString [
     ^ self parseResponse: response.
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'connection open/close' }
 Cassandra >> handleAuthentication: authResponse [
     | authClass response |
     Transcript show: 'Authentication required'; cr.
@@ -171,22 +173,30 @@ Cassandra >> handleAuthentication: authResponse [
 
 { #category : 'parsing' }
 Cassandra >> parseMetadata: stream [
-    | flags columnCount columns type |
-    flags := (stream next: 4) asInteger.
-    columnCount := (stream next: 4) asInteger.
-    columns := (1 to: columnCount) collect: [:i | 
-        | nameLength name|
-		  "skip keyspace, as we allready know"
-        nameLength := (stream next: 2) asInteger.
-        name := (stream next: nameLength) asString.
-        nameLength := (stream next: 2) asInteger.
-        name := (stream next: nameLength) asString.
-        nameLength := (stream next: 2) asInteger.
-        name := (stream next: nameLength) asString.
-        type := (stream next: 2) asInteger.
-        type].
-         
-    ^ columns.
+
+	| flags columnCount columns type |
+	flags := (stream next: 4) asInteger.
+	columnCount := (stream next: 4) asInteger.
+	columns := (1 to: columnCount) collect: [ :i |
+		           | nameLength name |
+		           "skip keyspace, as we allready know"
+		           nameLength := (stream next: 2) asInteger.
+		           name := (stream next: nameLength) asString.
+		           nameLength := (stream next: 2) asInteger.
+		           name := (stream next: nameLength) asString.
+		           nameLength := (stream next: 2) asInteger.
+		           name := (stream next: nameLength) asString.
+		           type := (stream next: 2) asInteger.
+		           self validateResultType: type.
+		           "Maps"
+		           type = 16r21 ifTrue: [
+			           type := { type . (stream next: 2) asInteger . (stream next: 2) asInteger  }].
+		           "List or set"
+		           (#( 16r20 16r22 ) includes: type) ifTrue: [
+			           type := { type . (stream next: 2) asInteger }].
+		           type ].
+
+	^ columns
 ]
 
 { #category : 'parsing' }
@@ -245,7 +255,7 @@ Cassandra >> parseValue: stream type: typeCode [
     
     typeCode = 1 ifTrue: [^ (stream next: length) asString]. "ASCII"
     typeCode = 2 ifTrue: [^ (stream next: 8) asInteger]. "BIGINT"
-    typeCode = 3 ifTrue: [^ (stream next: length) asString]. "BLOB"
+    typeCode = 3 ifTrue: [^ (stream next: length) asByteArray ]. "BLOB"
     typeCode = 4 ifTrue: [^ stream next = 1]. "BOOLEAN"
     typeCode = 5 ifTrue: [^ (stream next: 8) asFloat]. "DOUBLE"
     typeCode = 6 ifTrue: [^ (stream next: 4) asFloat]. "FLOAT"
@@ -380,4 +390,10 @@ Cassandra >> sendFrame: aByteArray [
 Cassandra >> testConnection [
         self connect: '172.17.0.2' port: 9042 username: 'cassandra' password: 'cassandra'.
 
+]
+
+{ #category : 'parsing' }
+Cassandra >> validateResultType: type [
+"Test for non-implmented return types, throws error if needed"
+(#(16r03 16r05 16r0E 16r10 16r30) includes: type) ifTrue: [ self error: 'Type in result is not implemented yet' ].
 ]
