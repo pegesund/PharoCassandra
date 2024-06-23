@@ -280,66 +280,65 @@ Cassandra >> parseValue: stream type: typeCode [
 
 { #category : 'connection open/close' }
 Cassandra >> performHandshake [
-    | optionsFrame optionsResponse startupFrame startupResponse |
-    
-    "Send OPTIONS frame"
-    Transcript show: 'Sending OPTIONS frame...'; cr.
-    optionsFrame := self buildOptionsFrame.
-    self sendFrame: optionsFrame.
-    (Delay forSeconds: 1) wait.
-    
-    "Receive OPTIONS response"
-    Transcript show: 'Waiting for OPTIONS response...'; cr.
-    optionsResponse := self receiveFrame.
-    Transcript show: 'Received OPTIONS response of ', optionsResponse size asString, ' bytes'; cr.
-    
-    "Validate OPTIONS response"
-    (self parseResponseOpcode: optionsResponse) = 6
-        ifFalse: [self error: 'Unexpected response opcode for OPTIONS'].
-    
-    "Send STARTUP frame"
-    Transcript show: 'Sending STARTUP frame...'; cr.
-    startupFrame := self buildStartupFrame.
-    self sendFrame: startupFrame.
-    
-    "Receive STARTUP response"
-    Transcript show: 'Waiting for STARTUP response...'; cr.
-    startupResponse := self receiveFrame.
-    Transcript show: 'Received STARTUP response of ', startupResponse size asString, ' bytes'; cr.
-    
-    "Handle STARTUP response"
-    (self parseResponseOpcode: startupResponse) caseOf: {
-        [3] -> [self handleAuthentication: startupResponse]. "AUTHENTICATE"
-        [2] -> [Transcript show: 'Ready to query'; cr]. "READY"
-        [0] -> [ "ERROR"
-            | errorCode errorMessage |
-            errorCode := (startupResponse copyFrom: 10 to: 13) asInteger.
-            errorMessage := (startupResponse copyFrom: 14 to: startupResponse size) asString.
-            self error: 'Server error: ', errorCode asString, ' - ', errorMessage
-        ]
-    } otherwise: [self error: 'Unexpected response opcode for STARTUP'].
-    
-    Transcript show: 'Handshake completed successfully'; cr.
+
+	| optionsFrame optionsResponse startupFrame startupResponse |
+	"Send OPTIONS frame"
+	optionsFrame := self buildOptionsFrame.
+	self sendFrame: optionsFrame.
+	(Delay forSeconds: 1) wait.
+
+	"Receive OPTIONS response"
+	optionsResponse := self receiveFrame.
+
+	"Validate OPTIONS response"
+	(self parseResponseOpcode: optionsResponse) = 6 ifFalse: [
+		self error: 'Unexpected response opcode for OPTIONS' ].
+
+	"Send STARTUP frame"
+	startupFrame := self buildStartupFrame.
+	self sendFrame: startupFrame.
+
+	"Receive STARTUP response"
+	startupResponse := self receiveFrame.
+
+	"Handle STARTUP response"
+	(self parseResponseOpcode: startupResponse)
+		caseOf: {
+				([ 3 ] -> [ self handleAuthentication: startupResponse ]). "AUTHENTICATE"
+				([ 2 ] -> [
+				 Transcript
+					 show: 'Ready to query';
+					 cr ]). "READY"
+				([ 0 ] -> [ "ERROR"
+				 | errorCode errorMessage |
+				 errorCode := (startupResponse copyFrom: 10 to: 13) asInteger.
+				 errorMessage := (startupResponse
+					                  copyFrom: 14
+					                  to: startupResponse size) asString.
+				 self error:
+					 'Server error: ' , errorCode asString , ' - ' , errorMessage ]) }
+		otherwise: [ self error: 'Unexpected response opcode for STARTUP' ].
+
 
 ]
 
 { #category : 'binary' }
 Cassandra >> receiveBytes: count [
-    | buffer bytesRead startTime |
-    buffer := ByteArray new: count.
-    bytesRead := 0.
-    startTime := DateAndTime now.
-    
-    [ bytesRead < count ] whileTrue: [
-        self checkForTimeout: startTime.
-        bytesRead := bytesRead + (self receiveDataInto: buffer startingAt: bytesRead + 1 count: count - bytesRead).
-        Transcript show: 'Received ', bytesRead asString, ' of ', count asString, ' bytes'; cr.
-        bytesRead = count ifFalse: [
-            Transcript show: 'Waiting for more data...'; cr.
-            (Delay forMilliseconds: 100) wait.
-        ].
-    ].
-    ^ buffer
+
+	| buffer bytesRead startTime |
+	buffer := ByteArray new: count.
+	bytesRead := 0.
+	startTime := DateAndTime now.
+
+	[ bytesRead < count ] whileTrue: [
+		self checkForTimeout: startTime.
+		bytesRead := bytesRead + (self
+			              receiveDataInto: buffer
+			              startingAt: bytesRead + 1
+			              count: count - bytesRead).
+		bytesRead = count ifFalse: [
+			(Delay forMilliseconds: 10) wait ] ].
+	^ buffer
 ]
 
 { #category : 'accessing' }
@@ -364,36 +363,34 @@ Cassandra >> receiveDataInto: buffer startingAt: start count: count [
 
 { #category : 'binary' }
 Cassandra >> receiveFrame [
-    | headerBytes bodyLength bodyBytes |
-    Transcript show: 'Attempting to receive frame...'; cr.
-    [
-        Transcript show: 'Reading header (9 bytes)...'; cr.
-        headerBytes := self receiveBytes: 9.
-        Transcript show: 'Header received: ', (self bytesToHexString: headerBytes); cr.
-        bodyLength := (headerBytes copyFrom: 6 to: 9) asInteger.
-        Transcript show: 'Body length: ', bodyLength asString, ' bytes'; cr.
-        Transcript show: 'Reading body...'; cr.
-        bodyBytes := self receiveBytes: bodyLength.
-        Transcript show: 'Body received: ', (self bytesToHexString: bodyBytes); cr.
-        ^ headerBytes, bodyBytes
-    ] on: Error do: [ :error |
-        Transcript show: 'Error receiving frame: ', error messageText; cr.
-        self error: 'Error receiving frame: ', error messageText
-    ].
+
+	| headerBytes bodyLength bodyBytes |
+	[
+	headerBytes := self receiveBytes: 9.
+	bodyLength := (headerBytes copyFrom: 6 to: 9) asInteger.
+	bodyBytes := self receiveBytes: bodyLength.
+	^ headerBytes , bodyBytes ]
+		on: Error
+		do: [ :error |
+			Transcript
+				show: 'Error receiving frame: ' , error messageText;
+				cr.
+			self error: 'Error receiving frame: ' , error messageText ]
 ]
 
 { #category : 'binary' }
 Cassandra >> sendFrame: aByteArray [
-    Transcript show: 'Sending frame of ', aByteArray size asString, ' bytes...'; cr.
-    [
-        socket nextPutAll: aByteArray.
-        socket flush.
-        Transcript show: 'Frame sent successfully'; cr.
-    ] on: Error do: [ :error |
-        Transcript show: 'Error sending frame: ', error messageText; cr.
-        self error: 'Error sending frame: ', error messageText.
-    ].
 
+	[
+	socket nextPutAll: aByteArray.
+	socket flush.
+ ]
+		on: Error
+		do: [ :error |
+			Transcript
+				show: 'Error sending frame: ' , error messageText;
+				cr.
+			self error: 'Error sending frame: ' , error messageText ]
 ]
 
 { #category : 'tests' }
