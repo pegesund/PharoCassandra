@@ -202,37 +202,37 @@ Cassandra >> parseMetadata: stream [
 
 { #category : 'parsing' }
 Cassandra >> parseResponse: responseBytes [
-    | stream version flags opcode length body kind columnTypes rowCount rows |
-    stream := ReadStream on: responseBytes.
-    
-    "Parse header"
-    version := stream next.
-    flags := stream next.
-    stream next: 2. "Skip stream ID"
-    opcode := stream next.
-    length := (stream next: 4) asInteger.
-    
-    "Parse body"
-    body := stream next: length.
-    stream := ReadStream on: body.
-  
-    "Ensure it's a RESULT response"
-    opcode = 8 ifFalse: [self error: 'Unexpected opcode'].
-    
-    kind := (stream next: 4) asInteger.
-    
-    "Ensure it's a ROWS result"
-    kind = 2 ifFalse: [self error: 'Unexpected result kind'].
 
-    "Parse metadata, return a list of column types"
-    columnTypes := self parseMetadata: stream.
+	| stream version flags opcode length body kind columnTypes rowCount rows |
+	stream := ReadStream on: responseBytes.
 
-    "Parse rows"
-    rowCount := (stream next: 4) asInteger.
-	 self error: 'Hit, en ikke lenger..'.
-    rows := (1 to: rowCount) collect: [:i | self parseRow: stream columns: columnTypes ].
-    
-    ^ rows.
+	"Parse header"
+	version := stream next.
+	flags := stream next.
+	stream next: 2. "Skip stream ID"
+	opcode := stream next.
+	length := (stream next: 4) asInteger.
+
+	"Parse body"
+	body := stream next: length.
+	stream := ReadStream on: body.
+
+	"Ensure it's a RESULT response"
+	opcode = 8 ifFalse: [ self error: 'Unexpected opcode' ].
+
+	"Ensure it's a ROWS result"
+	kind := (stream next: 4) asInteger.	
+	kind = 2 ifFalse: [ self error: 'Unexpected result kind' ].
+
+	"Parse metadata, return a list of column types"
+	columnTypes := self parseMetadata: stream.
+
+	"Parse rows"
+	rowCount := (stream next: 4) asInteger.
+	rows := (1 to: rowCount) collect: [ :i |
+		        self parseRow: stream columns: columnTypes ].
+
+	^ rows
 ]
 
 { #category : 'parsing' }
@@ -242,10 +242,11 @@ Cassandra >> parseResponseOpcode: responseBytes [
 
 { #category : 'parsing' }
 Cassandra >> parseRow: stream columns: metadata [
-    ^ metadata collect: [:column |
-        | value |
-        value := self parseValue: stream type: column second.
-        column first -> value].
+
+	^ metadata collect: [ :column |
+		  | value |
+		  value := self parseValue: stream type: column.
+		  value ]
 ]
 
 { #category : 'parsing' }
