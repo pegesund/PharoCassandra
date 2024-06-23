@@ -14,6 +14,32 @@ Class {
 	#tag : 'connection'
 }
 
+{ #category : 'converting' }
+Cassandra class >> doubleToByteArray: aDouble [
+    | lowWord highWord |
+    lowWord := aDouble basicAt: 1.
+    highWord := aDouble basicAt: 2.
+    ^ ByteArray new: 8 streamContents: [ :stream |
+        5 to: 8 do: [ :i |
+            stream nextPut: (highWord byteAt: 9 - i)
+        ].
+        1 to: 4 do: [ :i |
+            stream nextPut: (lowWord byteAt: 5 - i)
+        ]
+    ]
+]
+
+{ #category : 'converting' }
+Cassandra class >> floatToByteArray: aFloat [
+    | word |
+    word := aFloat asIEEE32BitWord.
+    ^ ByteArray new: 4 streamContents: [ :stream |
+        1 to: 4 do: [ :i |
+            stream nextPut: (word byteAt: 5 - i)
+        ]
+    ]
+]
+
 { #category : 'connection open/close' }
 Cassandra >> buildAuthResponse [ 
     | credentials stream |
