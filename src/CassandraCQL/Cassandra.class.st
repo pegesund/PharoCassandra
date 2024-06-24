@@ -126,6 +126,33 @@ Cassandra >> checkForTimeout: startTime [
 ]
 
 { #category : 'connection open/close' }
+Cassandra >> connect: host port: port [
+
+	| addr |
+	[
+	Transcript
+		show: 'Attempting to connect to ' , host , ':' , port asString;
+		cr.
+	addr := NetNameResolver addressForName: host.
+	socket := SocketStream openConnectionToHost: addr port: port.
+	socket binary. "Set the stream to binary mode"
+	socket autoFlush: true.
+	Transcript
+		show: 'Socket connected. Performing handshake...';
+		cr.
+	self performHandshake ]
+		on: Error
+		do: [ :error |
+			Transcript
+				show: 'Error connecting to ' , host , ':' , port asString , ': '
+					, error messageText;
+				cr.
+			self error:
+				'Error connecting to ' , host , ':' , port asString , ': '
+				, error messageText ]
+]
+
+{ #category : 'connection open/close' }
 Cassandra >> connect: host port: port username: aUsername password: aPassword [
     | addr |
     username := aUsername.
