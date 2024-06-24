@@ -15,3 +15,10 @@ ManifestCassandraCQLTests class >> ruleCodeCruftLeftInMethodsRuleV1FalsePositive
 	<ignoreForCoverage>
 	^ #(#(#(#RGPackageDefinition #(#'Cassandra-Tests')) #'2024-06-24T20:22:38.293627+02:00') )
 ]
+
+{ #category : 'code-critics' }
+ManifestCassandraCQLTests class >> ruleEqualsTrueRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGClassDefinition #(#CassandraTest)) #'2024-06-24T20:39:10.962089+02:00') )
+]

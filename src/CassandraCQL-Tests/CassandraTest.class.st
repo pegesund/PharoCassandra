@@ -24,12 +24,29 @@ CassandraTest class >> getTestIp [
 
 { #category : 'tests' }
 CassandraTest >> testReadDictionary [
-
-	| cassandra res |
+"this tests that map type is read correctly from the binary stream"
+	| cassandra data findEntry |
 	cassandra := Cassandra new.
 	cassandra connect: self class getTestIp port: 9042.
 
-	res := cassandra executeQuery:
-		       'SELECT * FROM system_schema.keyspaces'.
-	Transcript crShow: (res asString).
+	data := cassandra executeQuery:
+		        'SELECT * FROM system_schema.keyspaces'.
+
+	findEntry := [ :name |
+	             data
+		             detect: [ :entry | entry first = name ]
+		             ifNone: [ nil ] ].
+	"Assert that 'system_auth' exists with correct strategy and replication factor"
+	self assert: ((findEntry value: 'system_auth') notNil and: [
+			 (findEntry value: 'system_auth') second = true and: [
+				 ((findEntry value: 'system_auth') third at: 'class')
+				 = 'org.apache.cassandra.locator.SimpleStrategy' and: [
+					 ((findEntry value: 'system_auth') third at: 'replication_factor')
+					 = '1' ] ] ]).
+
+	"Assert that 'system_schema' exists with correct strategy"
+	self assert: ((findEntry value: 'system_schema') notNil and: [
+			 (findEntry value: 'system_schema') second = true and: [
+				 ((findEntry value: 'system_schema') third at: 'class')
+				 = 'org.apache.cassandra.locator.LocalStrategy' ] ])
 ]
