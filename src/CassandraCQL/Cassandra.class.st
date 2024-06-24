@@ -278,7 +278,7 @@ Cassandra >> parseRow: stream columns: metadata [
 { #category : 'parsing' }
 Cassandra >> parseValue: stream type: typeCode [
 
-	| length |
+	| length subType |
 	"Check for compound type, like a map or list""Now moved to main branch"
 	length := (stream next: 4) asInteger.
 	length = -1 ifTrue: [ ^ nil ].
@@ -287,11 +287,12 @@ Cassandra >> parseValue: stream type: typeCode [
 	typeCode = 2 ifTrue: [ ^ (stream next: 8) asInteger ]. "BIGINT"
 	typeCode = 3 ifTrue: [ ^ (stream next: length) asByteArray ]. "BLOB"
 	typeCode = 4 ifTrue: [ ^ stream next = 1 ]. "BOOLEAN"
-	typeCode = 7 ifTrue: [ |byteArray|
+	typeCode = 7 ifTrue: [
+		| byteArray |
 		byteArray := stream next: 8.
-		^ Float fromIEEE64BitWord: 
-    ((byteArray unsignedLongAt: 1 bigEndian: true) << 32) + 
-    (byteArray unsignedLongAt: 5 bigEndian: true) ]. "DOUBLE"
+		^ Float fromIEEE64BitWord:
+			  (byteArray unsignedLongAt: 1 bigEndian: true) << 32
+			  + (byteArray unsignedLongAt: 5 bigEndian: true) ]. "DOUBLE"
 	typeCode = 8 ifTrue: [
 		^ Float fromIEEE32Bit:
 			  ((stream next: 4) unsignedLongAt: 1 bigEndian: true) ]. "FLOAT"
@@ -299,8 +300,12 @@ Cassandra >> parseValue: stream type: typeCode [
 	typeCode = 13 ifTrue: [ ^ (stream next: length) asString ]. "VARCHAR"
 	typeCode = 14 ifTrue: [
 		^ DateAndTime fromUnixTime: (stream next: 8) asInteger / 1000 ]. "TIMESTAMP"
-
-	"Default: return raw bytes"
+	"Maps"
+	typeCode isCollection ifTrue: [
+		subType := typeCode first.
+		subType = 33 ifTrue: [ Transcript crShow: 'Got a map, yes' ].
+		^ CassandraCollectionParser parseMap: stream typeCode: typeCode  parent: self ].
+	"Default: return raw bytes, change to error later"
 	^ stream next: length
 ]
 

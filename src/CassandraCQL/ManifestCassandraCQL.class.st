@@ -24,6 +24,13 @@ ManifestCassandraCQL class >> ruleCascadedNextPutAllsRuleV1FalsePositive [
 ]
 
 { #category : 'code-critics' }
+ManifestCassandraCQL class >> ruleCodeCruftLeftInMethodsRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGPackageDefinition #(#CassandraCQL)) #'2024-06-24T19:12:59.480863+02:00') )
+]
+
+{ #category : 'code-critics' }
 ManifestCassandraCQL class >> ruleLiteralArrayContainsCommaRuleV1FalsePositive [
 
 	<ignoreForCoverage>
